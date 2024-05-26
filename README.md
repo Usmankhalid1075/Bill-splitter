@@ -1,124 +1,198 @@
-#bill splitter
 #include <iostream>
-#include <vector>
 #include <string>
-#include <iomanip>
+using namespace std;
 
-struct Person {
-    std::string name;
+// Structure to store expense details
+struct Expense {
+    int id;
+    string description;
     double amount;
-
-    Person(const std::string& n) : name(n), amount(0.0) {}
+    Expense* next;
 };
 
+// Class to manage the list of expenses
 class BillSplitter {
 private:
-    std::vector<Person> people;
+    Expense* head;
+    int expenseCount;
 
 public:
-    void addPerson(const std::string& name) {
-        people.push_back(Person(name));
+    BillSplitter() : head(nullptr), expenseCount(0) {}
+
+    // Add a new expense
+    void addExpense(const string& description, double amount) {
+        Expense* newExpense = new Expense;
+        newExpense->id = ++expenseCount;
+        newExpense->description = description;
+        newExpense->amount = amount;
+        newExpense->next = head;
+        head = newExpense;
+        cout << "Expense added successfully!" << endl;
     }
 
-    void removePerson(const std::string& name) {
-        for (auto it = people.begin(); it != people.end(); ++it) {
-            if (it->name == name) {
-                people.erase(it);
-                break;
-            }
-        }
-    }
-
-    void recordExpense(const std::string& name, double amount) {
-        for (auto& person : people) {
-            if (person.name == name) {
-                person.amount += amount;
-                break;
-            }
-        }
-    }
-
-    void calculateShares() {
-        double totalAmount = 0.0;
-        for (const auto& person : people) {
-            totalAmount += person.amount;
-        }
-
-        if (totalAmount == 0.0) {
-            std::cout << "No expenses recorded yet.\n";
+    // Remove an expense by id
+    void removeExpense(int id) {
+        if (!head) {
+            cout << "No expenses to remove!" << endl;
             return;
         }
 
-        double share = totalAmount / people.size();
-        std::cout << "Total amount: $" << std::fixed << std::setprecision(2) << totalAmount << std::endl;
-        std::cout << "Share per person: $" << std::fixed << std::setprecision(2) << share << std::endl;
+        Expense* temp = head;
+        Expense* prev = nullptr;
 
-        std::cout << "Individual shares:\n";
-        for (const auto& person : people) {
-            std::cout << person.name << ": $" << std::fixed << std::setprecision(2) << person.amount << std::endl;
+        // If head node itself holds the id to be deleted
+        if (temp != nullptr && temp->id == id) {
+            head = temp->next; // Changed head
+            delete temp;       // Free old head
+            cout << "Expense removed successfully!" << endl;
+            return;
+        }
+
+        // Search for the id to be deleted, keep track of the previous node
+        while (temp != nullptr && temp->id != id) {
+            prev = temp;
+            temp = temp->next;
+        }
+
+        // If id was not present in linked list
+        if (temp == nullptr) {
+            cout << "Expense not found!" << endl;
+            return;
+        }
+
+        // Unlink the node from linked list
+        prev->next = temp->next;
+        delete temp; // Free memory
+        cout << "Expense removed successfully!" << endl;
+    }
+
+    // Update an existing expense by id
+    void updateExpense(int id, const string& newDescription, double newAmount) {
+        Expense* temp = head;
+
+        while (temp != nullptr) {
+            if (temp->id == id) {
+                temp->description = newDescription;
+                temp->amount = newAmount;
+                cout << "Expense updated successfully!" << endl;
+                return;
+            }
+            temp = temp->next;
+        }
+
+        cout << "Expense not found!" << endl;
+    }
+
+    // View all expenses
+    void viewExpenses() const {
+        if (!head) {
+            cout << "No expenses to display!" << endl;
+            return;
+        }
+
+        Expense* temp = head;
+        while (temp != nullptr) {
+            cout << "ID: " << temp->id << ", Description: " << temp->description << ", Amount: $" << temp->amount << endl;
+            temp = temp->next;
         }
     }
 
-    void displayMenu() {
-        std::cout << "\nBill Splitter Menu:\n"
-                     "1. Add Person\n"
-                     "2. Remove Person\n"
-                     "3. Record Expense\n"
-                     "4. Calculate Shares\n"
-                     "5. Exit\n";
-    }
+    // Calculate total expenses
+    double calculateTotal() const {
+        double total = 0.0;
+        Expense* temp = head;
 
-    void processChoice(int choice) {
-        switch (choice) {
-            case 1: {
-                std::string name;
-                std::cout << "Enter person's name: ";
-                std::cin >> name;
-                addPerson(name);
-                break;
-            }
-            case 2: {
-                std::string name;
-                std::cout << "Enter person's name to remove: ";
-                std::cin >> name;
-                removePerson(name);
-                break;
-            }
-            case 3: {
-                std::string name;
-                double amount;
-                std::cout << "Enter person's name: ";
-                std::cin >> name;
-                std::cout << "Enter expense amount: $";
-                std::cin >> amount;
-                recordExpense(name, amount);
-                break;
-            }
-            case 4:
-                calculateShares();
-                break;
-            case 5:
-                std::cout << "Exiting...\n";
-                break;
-            default:
-                std::cout << "Invalid choice. Please try again.\n";
-                break;
+        while (temp != nullptr) {
+            total += temp->amount;
+            temp = temp->next;
         }
+
+        return total;
     }
 
-    void run() {
-        int choice;
-        do {
-            displayMenu();
-            std::cout << "Enter your choice: ";
-            std::cin >> choice;
-            processChoice(choice);
-        } while (choice != 5);
+    // Split the bill among a given number of people
+    void splitBill(int numberOfPeople) const {
+        if (numberOfPeople <= 0) {
+            cout << "Number of people must be greater than 0!" << endl;
+            return;
+        }
+
+        double total = calculateTotal();
+        double share = total / numberOfPeople;
+        cout << "Total expenses: $" << total << endl;
+        cout << "Each person should pay: $" << share << endl;
+    }
+
+    // Destructor to clean up the linked list
+    ~BillSplitter() {
+        Expense* current = head;
+        while (current != nullptr) {
+            Expense* next = current->next;
+            delete current;
+            current = next;
+        }
     }
 };
 
+// Main function to demonstrate the bill splitter functionalities
 int main() {
     BillSplitter billSplitter;
-    billSplitter.run();
+    int choice;
+    int id;
+    string description;
+    double amount;
+    int numberOfPeople;
+
+    do {
+        cout << "\nBill Splitter Menu:" << endl;
+        cout << "1. Add Expense" << endl;
+        cout << "2. Remove Expense" << endl;
+        cout << "3. Update Expense" << endl;
+        cout << "4. View Expenses" << endl;
+        cout << "5. Split Bill" << endl;
+        cout << "6. Exit" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Enter description: ";
+                cin.ignore();
+                getline(cin, description);
+                cout << "Enter amount: ";
+                cin >> amount;
+                billSplitter.addExpense(description, amount);
+                break;
+            case 2:
+                cout << "Enter expense ID to remove: ";
+                cin >> id;
+                billSplitter.removeExpense(id);
+                break;
+            case 3:
+                cout << "Enter expense ID to update: ";
+                cin >> id;
+                cout << "Enter new description: ";
+                cin.ignore();
+                getline(cin, description);
+                cout << "Enter new amount: ";
+                cin >> amount;
+                billSplitter.updateExpense(id, description, amount);
+                break;
+            case 4:
+                billSplitter.viewExpenses();
+                break;
+            case 5:
+                cout << "Enter number of people: ";
+                cin >> numberOfPeople;
+                billSplitter.splitBill(numberOfPeople);
+                break;
+            case 6:
+                cout << "Exiting..." << endl;
+                break;
+            default:
+                cout << "Invalid choice! Please try again." << endl;
+        }
+    } while (choice != 6);
+
     return 0;
 }
